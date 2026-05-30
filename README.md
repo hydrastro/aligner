@@ -179,7 +179,7 @@ ds is an external dependency: github.com/hydrastro/ds (see Build above).
 ## CLI
 
 ```
-aligner FILE              full pipeline → stdout (default)
+#aligner FILE              full pipeline → stdout (default)
 aligner --lex FILE        dump tokens
 aligner --ast FILE        dump AST
 aligner --destring FILE   show planned literal lift decisions
@@ -210,3 +210,69 @@ See `LIMITS.md`. The biggest still-open items: running `cpp` first,
 handling mixed-type aggregate inits where some fields are `char[]` and
 others `char *`, and teaching aligner about printf-family functions so
 format-string warnings survive.
+
+
+## Example output
+
+Enjoy
+```c
+#inlude                                                                <stdio.h>
+int main                                                                       (
+void                                                                           )
+                                                                               {
+static const char sa7bec5ec                                                    [
+5                                                                            ]={
+102                                                                            ,
+105                                                                            ,
+122                                                                            ,
+122                                                                            ,
+0                                                                             };
+static const char s660cb7cc                                                    [
+5                                                                            ]={
+98                                                                             ,
+117                                                                            ,
+122                                                                            ,
+122                                                                            ,
+0                                                                             };
+static const char s37b9b98c                                                    [
+3                                                                            ]={
+37                                                                             ,
+100                                                                            ,
+0                                                                             };
+static const char s811c9dc5                                                    [
+1                                                                            ]={
+0                                                                             };
+
+for                                                                            (
+int i                                                                          =
+1                                                                              ;
+i                                                                             <=
+100                                                                          ;++
+i                                                                             ){
+if                                                                             (
+i                                                                              %
+3                                                                             ==
+0                                                                              )
+printf                                                                         (
+sa7bec5ec                                                                     );
+if                                                                             (
+i                                                                              %
+5                                                                             ==
+0                                                                              )
+printf                                                                         (
+s660cb7cc                                                                     );
+if                                                                             (
+i                                                                              *
+i                                                                              *
+i                                                                              *
+i                                                                              %
+15                                                                            ==
+1                                                                              )
+printf                                                                         (
+s37b9b98c                                                                      ,
+i                                                                             );
+puts                                                                           (
+s811c9dc5                                                                     );
+                                                                               }
+                                                                               }
+```
