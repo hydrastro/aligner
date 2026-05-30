@@ -46,24 +46,52 @@ static const char scfbe045a                                               [15]={
 
 ## Build
 
-### With Nix
+### Self-hosted (no dependencies)
+
+The committed `aligner.c` at the repo root is libc-only. Anywhere a C
+compiler exists, this works:
+
+```sh
+cc -std=c99 -O2 -o aligner aligner.c
+./aligner some-file.c
+```
+
+### From src/ (modular development build)
+
+The modular build under `src/` depends on
+[hydrastro/ds](https://github.com/hydrastro/ds) — a separate library, NOT
+vendored into this repository.
+
+**With Nix** — the flake fetches ds automatically:
 
 ```sh
 nix build
-./result/bin/aligner some-file.c > formatted.c
-nix develop           # gcc, make, gdb, valgrind, clangd, bear
+./result/bin/aligner some-file.c
+nix develop           # gcc, make, gdb, valgrind, clangd, bear; $DSDIR pre-set
 ```
 
-### With make
+**Without Nix** — pick one:
 
 ```sh
-make
-./build/aligner some-file.c
+make ds-fetch                            # clones ds into ./ds
+make                                     # then build normally
+
+# or point at an existing checkout:
+make DSDIR=/path/to/ds
+```
+
+`make` without ds present prints a clear error explaining all four options
+(nix, fetch, manual path, or just `cc aligner.c`).
+
+### Make targets
+
+```sh
 make                  # build ./build/aligner (modular, from src/)
 make test             # full test suite (7 stages, 67 tests)
-make aligner-c        # generate build/aligner.c (single-file amalgam, libc only)
+make aligner-c        # generate build/aligner.c (single-file amalgam)
 make self-host        # regenerate the canonical aligned aligner.c at repo root
 make from-aligner-c   # build the binary straight from aligner.c at repo root
+make ds-fetch         # clone github.com/hydrastro/ds into ./ds
 make clean            # remove build artifacts
 make distclean        # remove build/, editor backups, swap files, *.o etc.
 make repo-cleanup     # distclean + remove old experiment files at root
@@ -144,7 +172,8 @@ tools/
   shim.c               minimal ds replacement for the amalgam build
   build_single.sh      generates build/aligner.c from src + shim
   repo-cleanup.sh      wipe old experiments and other workspace debris
-ds/                    data-structures library this project depends on
+
+ds is an external dependency: github.com/hydrastro/ds (see Build above).
 ```
 
 ## CLI

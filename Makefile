@@ -5,7 +5,15 @@ AR      ?= ar
 CFLAGS  ?= -std=c99 -Wall -Wextra -Wpedantic -O2 -g
 LDLIBS  ?= -lpthread
 
-DSDIR    := ds
+# ds is a separate project, https://github.com/hydrastro/ds, NOT vendored
+# into this repository. The Makefile expects to find its source tree at
+# DSDIR. Options:
+#   - Nix: `nix build` or `nix develop` — flake input handles it
+#   - manual: clone github.com/hydrastro/ds and pass DSDIR=/path/to/ds
+#   - convenience: `make ds-fetch` clones it into ./ds for you
+# The self-hosted build path (cc aligner.c) doesn't need ds at all.
+DSDIR    ?= ds
+export DSDIR
 SRCDIR   := src
 TESTDIR  := tests
 BUILDDIR := build
@@ -41,9 +49,33 @@ ALN_OBJS := $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(ALN_SRCS))
 ALN_CFLAGS := $(CFLAGS) -I$(DSDIR) -I$(SRCDIR)
 ALN_BIN  := $(BUILDDIR)/aligner
 
-.PHONY: all clean distclean test test-lexer aligner-c repo-cleanup self-host from-aligner-c
+.PHONY: all clean distclean test test-lexer aligner-c repo-cleanup self-host from-aligner-c ds-fetch check-ds
 
-all: $(ALN_BIN)
+all: check-ds $(ALN_BIN)
+
+# Guard target: fail fast with a friendly message if ds is missing.
+check-ds:
+	@if [ ! -d "$(DSDIR)/lib" ]; then \
+		echo "ds not found at '$(DSDIR)/lib'."; \
+		echo ""; \
+		echo "The aligner depends on github.com/hydrastro/ds (a separate project)."; \
+		echo "Choose one:"; \
+		echo "  - nix:     'nix build' or 'nix develop' (auto-fetches ds)"; \
+		echo "  - clone:   'make ds-fetch'  (clones it into ./ds)"; \
+		echo "  - manual:  pass DSDIR=/path/to/ds on the make command line"; \
+		echo "  - skip it: 'cc -std=c99 -O2 -o aligner aligner.c'  (the self-hosted"; \
+		echo "             build doesn't need ds — aligner.c is libc-only)"; \
+		exit 1; \
+	fi
+
+# Convenience: clone ds into ./ds if it isn't already present.
+ds-fetch:
+	@if [ -d ds ]; then \
+		echo "ds/ already present, skipping clone"; \
+	else \
+		echo "cloning github.com/hydrastro/ds into ./ds ..."; \
+		git clone --depth 1 https://github.com/hydrastro/ds ds; \
+	fi
 
 $(ALN_BIN): $(ALN_OBJS) $(DS_LIB)
 	$(CC) -o $@ $(ALN_OBJS) $(DS_LIB) $(LDLIBS)

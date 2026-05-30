@@ -8,6 +8,15 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CFMT="$ROOT/build/aligner"
+
+# ds is an external dependency. Resolve it the same way `make` does: env
+# var $DSDIR wins, otherwise we look at $ROOT/ds.
+DS="${DSDIR:-$ROOT/ds}"
+if [ ! -d "$DS/lib" ]; then
+    echo "tests/runner.sh: ds not found at '$DS/lib'." >&2
+    echo "  set DSDIR=/path/to/ds or run 'make ds-fetch'." >&2
+    exit 2
+fi
 LOSSLESS="$ROOT/build/lossless_test"
 
 if [ ! -x "$CFMT" ]; then
@@ -73,7 +82,7 @@ int main(int argc, char **argv) {
 }
 EOF
     cc -std=c99 -Wall -Wextra -Wpedantic -O2 \
-       -I"$ROOT/ds" -I"$ROOT/src" \
+       -I"$DS" -I"$ROOT/src" \
        -o "$LOSSLESS" /tmp/lossless_test.c \
        "$ROOT/build/lexer.o" "$ROOT/build/libds.a" -lpthread
 }
@@ -88,7 +97,7 @@ run_lexer_tests() {
     while IFS= read -r f; do files+=("$f"); done < <(
         find "$ROOT/tests/corpus" -name '*.c' 2>/dev/null
         find "$ROOT/src"          -name '*.c'
-        find "$ROOT/ds/lib" -name '*.c' 2>/dev/null | head -5
+        find "$DS/lib" -name '*.c' 2>/dev/null | head -5
     )
 
     for f in "${files[@]}"; do
@@ -201,7 +210,7 @@ int main(int argc, char **argv) {
 }
 EOF
     cc -std=c99 -Wall -Wextra -Wpedantic -O2 \
-       -I"$ROOT/ds" -I"$ROOT/src" \
+       -I"$DS" -I"$ROOT/src" \
        -o "$PARSER_TEST" /tmp/parser_test.c \
        "$ROOT/build/lexer.o" "$ROOT/build/ast.o" "$ROOT/build/parser.o" \
        "$ROOT/build/libds.a" -lpthread
@@ -320,7 +329,6 @@ run_self_format_tests() {
     trap "rm -rf $tmp" EXIT
 
     mkdir -p "$tmp/src"
-    cp -r "$ROOT/ds"        "$tmp/"
     cp    "$ROOT/Makefile" "$tmp/"
 
     # Format every .c through cfmt; copy headers untouched.
@@ -338,7 +346,7 @@ run_self_format_tests() {
     cp "$ROOT"/src/*.h "$tmp/src/"
 
     # Build.
-    if ! (cd "$tmp" && make >/dev/null 2>"$tmp/build.err"); then
+    if ! (cd "$tmp" && make DSDIR="$DS" >/dev/null 2>"$tmp/build.err"); then
         note_fail "self-format: build" "$(head -3 $tmp/build.err)"
         return
     fi
@@ -372,7 +380,7 @@ run_amalgam_tests() {
     set +e
 
     # Build the amalgam (uses bash tools/build_single.sh + cc).
-    if ! (cd "$ROOT" && make aligner-c >/tmp/amalgam-build.log 2>&1); then
+    if ! (cd "$ROOT" && make DSDIR="$DS" aligner-c >/tmp/amalgam-build.log 2>&1); then
         note_fail "amalgam: build" "$(tail -3 /tmp/amalgam-build.log)"
         return
     fi
